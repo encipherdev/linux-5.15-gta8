@@ -1,0 +1,214 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Samsung Galaxy Tab A8 10.5 (SM-X200 Wi-Fi / SM-X205 LTE / SM-X207, gta8)
+ * Unisoc Tiger T618 (UMS512 / SharkL5Pro) board DTS file
+ * Linux 5.15 GKI Bring-Up
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/clock/sprd,ums512-clk.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include "ums512/ums512.dtsi"
+#include "sc2730/sc2730.dtsi"
+#include "reserved-memory/ums512-common.dtsi"
+#include "reserved-memory/ums512-1h10-overlay.dtsi"
+#include "ums512/gpu-gondul.dtsi"
+#include "trusty/ums512.dtsi"
+#include "sound/fe-be.dtsi"
+#include "sound/virtual-devices.dtsi"
+
+&dsi {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel: panel {
+		compatible = "sprd,generic-mipi-panel";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0>;
+
+		port@1 {
+			reg = <1>;
+			panel_in: endpoint {
+				remote-endpoint = <&dphy_out>;
+			};
+		};
+	};
+};
+
+#include "Tab_A8/AX6300-OT10-common.dtsi"
+
+/ {
+	model = "Unisoc UMS512 SoC";
+	compatible = "sprd,ums512", "sprd,ums512-25c10", "samsung,gta8";
+	sprd,sc-id = "ums512 1000 1000";
+	sprd,board_id = <0x1100>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &aon_i2c0;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi2 = &spi2;
+		spi3 = &spi3;
+		spi4 = &adi_bus;
+	};
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		stdout-path = "serial1:115200n8";
+		bootargs = "earlycon loop.max_part=7 loglevel=7 printk.devkmsg=on";
+	};
+
+	/* Simple framebuffer using bootloader splash at 0x9e000000 (1200x1920) */
+	framebuffer0: framebuffer@9e000000 {
+		compatible = "simple-framebuffer";
+		reg = <0x0 0x9e000000 0x0 0x9e4000>;
+		width = <1200>;
+		height = <1920>;
+		stride = <(1200 * 4)>;
+		format = "x8r8g8b8";
+		status = "okay";
+	};
+
+	/* Persistent kernel console oops log in RAM */
+	reserved-memory {
+		ramoops@fff80000 {
+			compatible = "ramoops";
+			reg = <0x0 0xfff80000 0x0 0x40000>;
+			record-size = <0x8000>;
+			console-size = <0x8000>;
+			pmsg-size = <0x8000>;
+		};
+	};
+
+	extcon_gpio: extcon-gpio {
+		compatible = "linux,extcon-usb-gpio";
+		vbus-gpio = <&pmic_eic 0 GPIO_ACTIVE_HIGH>;
+	};
+
+	dmabuf: dmabuf {
+		compatible = "sprd,dmabuf";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-power {
+			label = "Power Key";
+			gpios = <&pmic_eic 1 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			wakeup-source;
+			debounce-interval = <2>;
+		};
+
+		key-volumeup {
+			label = "Volume Up Key";
+			gpios = <&ap_gpio 125 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEUP>;
+			wakeup-source;
+			debounce-interval = <2>;
+		};
+
+		key-volumedown {
+			label = "Volume Down Key";
+			gpios = <&pmic_eic 4 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			wakeup-source;
+			debounce-interval = <2>;
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+};
+
+&spi2 {
+	status = "okay";
+};
+
+/* MicroSD slot */
+&sdio0 {
+	cd-gpios = <&eic_sync 19 GPIO_ACTIVE_HIGH>;
+	sprd,phy-delay-sd-uhs-sdr104 = <0x7f 0x73 0x72 0x72>;
+	sprd,phy-delay-sd-uhs-sdr50 = <0x6e 0x7f 0x01 0x01>;
+	sprd,phy-delay-sd-highspeed = <0x7f 0x1a 0x9a 0x9a>;
+	sprd,phy-delay-legacy = <0x7f 0x1a 0x9a 0x9a>;
+	vmmc-supply = <&vddsdcore>;
+	vqmmc-supply = <&vddsdio>;
+	bus-width = <4>;
+	no-sdio;
+	no-mmc;
+	sd-uhs-sdr104;
+	sd-uhs-sdr50;
+	status = "okay";
+};
+
+/* eMMC storage (HS400 8-bit) */
+&sdio3 {
+	bus-width = <8>;
+	non-removable;
+	no-sdio;
+	no-sd;
+	cap-mmc-hw-reset;
+	status = "okay";
+};
+
+&pwms {
+	status = "okay";
+};
+
+&aon_i2c0 {
+	status = "okay";
+	clock-frequency = <1000000>;
+};
+
+&i2c3 {
+	status = "okay";
+};
+
+&i2c4 {
+	status = "okay";
+};
+
+&usb {
+	status = "okay";
+};
+
+&hsphy {
+	status = "okay";
+};
+
+&gpu {
+	status = "okay";
+};
+
+&dphy {
+	status = "okay";
+};
